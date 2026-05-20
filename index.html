@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jornada Sênior</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- SCREEN: SETUP -->
+<div id="screen-setup" class="screen active">
+  <div class="setup-bg"></div>
+  <div class="setup-container">
+    <div class="logo-block">
+      <span class="logo-tag">&#10064;</span>
+      <h1 class="logo-title">Jornada<br><em>Sênior</em></h1>
+      <p class="logo-sub">Do estágio à liderança — um passo de cada vez</p>
+    </div>
+
+    <div class="setup-card">
+      <h2 class="setup-heading">Configurar Partida</h2>
+
+      <div class="form-group">
+        <label>Quantos jogadores?</label>
+        <div class="player-count-btns" id="playerCountBtns">
+          <button class="cnt-btn active" data-count="2">2</button>
+          <button class="cnt-btn" data-count="3">3</button>
+          <button class="cnt-btn" data-count="4">4</button>
+        </div>
+      </div>
+
+      <div id="playerForms" class="player-forms"></div>
+
+      <button class="btn-start" id="btnStart">Iniciar Jornada &#8594;</button>
+    </div>
+
+    <div class="setup-footer-links">
+      <div class="rules-link" id="btnRules">&#9432; Ver Regras</div>
+      <div class="rules-link" id="btnDevs">&#128101; Desenvolvedores</div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN: GAME -->
+<div id="screen-game" class="screen">
+  <header class="game-header">
+    <div class="header-logo">&#10064; Jornada <em>Sênior</em></div>
+    <div class="header-actions">
+      <button class="btn-icon" id="btnRulesGame" title="Regras">&#9432;</button>
+      <button class="btn-icon btn-danger" id="btnRestart" title="Reiniciar">&#8635; Reiniciar</button>
+    </div>
+  </header>
+
+  <div class="game-layout">
+    <!-- Board -->
+    <div class="board-wrap">
+      <div class="board" id="board"></div>
+    </div>
+
+    <!-- Side Panel -->
+    <aside class="side-panel">
+      <!-- Players -->
+      <div class="panel-block" id="playersPanel"></div>
+
+      <!-- Dice -->
+      <div class="panel-block dice-block">
+        <div class="dice-area">
+          <div class="dice" id="dice">&#9856;</div>
+          <div class="dice-value" id="diceValue">—</div>
+        </div>
+        <button class="btn-roll" id="btnRoll">Rolar Dado</button>
+        <div class="turn-info" id="turnInfo"></div>
+      </div>
+
+      <!-- Log -->
+      <div class="panel-block log-block">
+        <div class="log-title">&#128221; Diário de Bordo</div>
+        <div class="log-list" id="logList"></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- SCREEN: WINNER -->
+<div id="screen-winner" class="screen">
+  <div class="winner-container">
+    <div class="confetti-wrap" id="confetti"></div>
+    <div class="trophy">&#127942;</div>
+    <h1 class="winner-title">SÊNIOR NA ÁREA!</h1>
+    <p class="winner-name" id="winnerName"></p>
+    <p class="winner-area" id="winnerArea"></p>
+    <div class="winner-stats" id="winnerStats"></div>
+    <button class="btn-start" id="btnPlayAgain">&#8635; Nova Partida</button>
+  </div>
+</div>
+
+<!-- MODAL: Card -->
+<div class="modal-overlay" id="cardModal">
+  <div class="modal-card">
+    <div class="card-type" id="cardType"></div>
+    <div class="card-icon" id="cardIcon"></div>
+    <div class="card-title" id="cardTitle"></div>
+    <div class="card-text" id="cardText"></div>
+    <div class="card-effect" id="cardEffect"></div>
+    <button class="btn-start btn-sm" id="btnCloseCard">Continuar &#8594;</button>
+  </div>
+</div>
+
+<!-- MODAL: Special Square -->
+<div class="modal-overlay" id="squareModal">
+  <div class="modal-card">
+    <div class="card-type" id="squareType"></div>
+    <div class="card-icon" id="squareIcon"></div>
+    <div class="card-title" id="squareTitle"></div>
+    <div class="card-text" id="squareText"></div>
+    <div id="squareChoices" class="square-choices"></div>
+    <button class="btn-start btn-sm" id="btnCloseSquare" style="display:none">Continuar &#8594;</button>
+  </div>
+</div>
+
+<!-- MODAL: Rules -->
+<div class="modal-overlay" id="rulesModal">
+  <div class="modal-rules">
+    <button class="btn-close-rules" id="btnCloseRules">&#10005;</button>
+    <h2>&#128218; Regras — Jornada Sênior</h2>
+    <div class="rules-content">
+      <h3>Objetivo</h3>
+      <p>Ser o primeiro a chegar à Casa 60 e conquistar o cargo de <strong>Sênior</strong>. Não é necessário tirar o número exato — basta alcançar ou ultrapassar a casa 60.</p>
+      <h3>Áreas de Atuação</h3>
+      <ul>
+        <li><strong>💻 TI — Adaptação Rápida:</strong> Uma vez a cada 3 rodadas, pode rolar o dado novamente se o resultado for baixo (1–2). Deve aceitar o segundo resultado.</li>
+        <li><strong>🏥 Saúde — Resiliência:</strong> Imune a casas e cartas que mandam perder uma rodada (ex: Burnout).</li>
+        <li><strong>📊 Negócios — Networking:</strong> Ao cair na mesma casa que outro jogador, avança 2 casas extras imediatamente.</li>
+        <li><strong>🎨 Artes — Criatividade:</strong> Ao tirar 6 no dado, puxa automaticamente uma carta bônus de Destino Corporativo.</li>
+      </ul>
+      <h3>Casas Especiais</h3>
+      <ul>
+        <li><strong>Casa 10 — Formatura:</strong> Role o dado novamente como bônus.</li>
+        <li><strong>Casa 20 — Fim do Estágio:</strong> Escolha: avançar para a 23 (aceita salário baixo) ou ficar e perder 1 rodada (busca salário melhor).</li>
+        <li><strong>Casa 30 — Promoção Júnior:</strong> Avance 2 casas.</li>
+        <li><strong>Casa 45 — Crise:</strong> Volte 3 casas.</li>
+        <li><strong>Casa 55 — Liderança de Projeto:</strong> Para sair, precisa tirar 4, 5 ou 6. Se tirar 1–3, não anda.</li>
+        <li><strong>Casa 60 — Sênior!</strong> Você venceu.</li>
+      </ul>
+      <h3>Casas Coringa (?)</h3>
+      <p>Casas 5, 12, 18, 26, 33, 38, 42, 48, 52, 58. Ao cair, puxe uma carta de Destino Corporativo e aplique o efeito.</p>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Reroll confirm -->
+<div class="modal-overlay" id="rerollModal">
+  <div class="modal-card">
+    <div class="card-type positive">💻 Adaptação Rápida — TI</div>
+    <div class="card-icon">🎲</div>
+    <div class="card-title">Resultado baixo!</div>
+    <div class="card-text" id="rerollText"></div>
+    <div class="square-choices">
+      <button class="choice-btn choice-yes" id="btnAcceptReroll">Aceitar resultado (<span id="rerollOriginal"></span>)</button>
+      <button class="choice-btn choice-no" id="btnUseReroll">Rolar de novo (habilidade)</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Developers -->
+<div class="modal-overlay" id="devsModal">
+  <div class="modal-devs">
+    <button class="btn-close-rules" id="btnCloseDevs">&#10005;</button>
+    <div class="devs-header">
+      <span class="devs-star">&#10064;</span>
+      <h2>Equipe de Desenvolvimento</h2>
+      <p class="devs-subtitle">As mentes por trás da Jornada Sênior</p>
+    </div>
+
+    <div class="devs-grid">
+
+      <div class="dev-card dev-core">
+        <div class="dev-role-badge">Core Function</div>
+        <div class="dev-avatar">TH</div>
+        <div class="dev-name">Thomaz André</div>
+        <div class="dev-desc">Arquitetura da lógica central do jogo, mecânicas e regras.</div>
+      </div>
+
+      <div class="dev-card dev-body">
+        <div class="dev-role-badge">Core Body</div>
+        <div class="dev-avatar">GK</div>
+        <div class="dev-name">Gustavo Keller</div>
+        <div class="dev-desc">Estrutura base da aplicação e integração entre camadas.</div>
+      </div>
+
+      <div class="dev-card dev-style">
+        <div class="dev-role-badge">Style Body</div>
+        <div class="dev-avatar">BF</div>
+        <div class="dev-name">Beatriz Fermino</div>
+        <div class="dev-desc">Identidade visual, design system e experiência do usuário.</div>
+      </div>
+
+      <div class="dev-card dev-plan">
+        <div class="dev-role-badge">Planning</div>
+        <div class="dev-avatar">PH</div>
+        <div class="dev-name">Pedro Henrique Siqueira</div>
+        <div class="dev-desc">Planejamento estratégico e roadmap do projeto.</div>
+      </div>
+
+      <div class="dev-card dev-plan">
+        <div class="dev-role-badge">Planning</div>
+        <div class="dev-avatar">GP</div>
+        <div class="dev-name">Gabriel Pinheiro</div>
+        <div class="dev-desc">Planejamento estratégico e coordenação de entregas.</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
