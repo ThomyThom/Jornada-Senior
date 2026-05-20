@@ -117,6 +117,27 @@ function clearSession() {
   try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
 }
 
+// ─── NOTIFICAÇÃO (TOAST) ──────────────────────────────
+function showToast(message) {
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--accent); color: #000; padding: 12px 24px;
+    border-radius: 8px; font-weight: bold; z-index: 9999;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    font-family: 'Syne', sans-serif;
+    animation: modalIn 0.3s ease;
+  `;
+  toast.innerHTML = `🔄 ${message}`;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.5s ease';
+    setTimeout(() => toast.remove(), 500);
+  }, 3500);
+}
+
 // ─── SETUP SCREEN ────────────────────────────────────
 
 let setupPlayerCount = 2;
