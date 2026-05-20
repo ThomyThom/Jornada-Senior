@@ -118,6 +118,7 @@ function clearSession() {
 }
 
 // ─── NOTIFICAÇÃO (TOAST) ──────────────────────────────
+
 function showToast(message) {
   const toast = document.createElement('div');
   toast.style.cssText = `
@@ -136,6 +137,38 @@ function showToast(message) {
     toast.style.transition = 'opacity 0.5s ease';
     setTimeout(() => toast.remove(), 500);
   }, 3500);
+}
+
+// ─── ANIMAÇÃO DE MOVIMENTO ────────────────────────────
+
+function animateMovement(p, targetPos, callback) {
+  const oldPos = p.position;
+  if (oldPos === targetPos) {
+    if (callback) callback();
+    return;
+  }
+
+  const step = targetPos > oldPos ? 1 : -1;
+  const totalSteps = Math.abs(targetPos - oldPos);
+  let currentStep = 0;
+
+  const interval = setInterval(() => {
+    currentStep++;
+    p.position += step;
+    renderPawns();
+
+    // Quando chegar no destino
+    if (currentStep === totalSteps) {
+      clearInterval(interval);
+      
+      // Pisca a casa final
+      const cell = $$(`cell-${p.position}`);
+      if (cell) cell.classList.add('highlight-move');
+      setTimeout(() => cell && cell.classList.remove('highlight-move'), 600);
+      
+      if (callback) callback();
+    }
+  }, 250); // 250ms de tempo pulando entre cada casa
 }
 
 // ─── SETUP SCREEN ────────────────────────────────────
@@ -256,7 +289,7 @@ function startGame(resumed) {
   
   if (resumed) {
     addLog('neutral', '🔄', 'Sessão anterior retomada!');
-    showToast('Sessão anterior retomada! Bem-vindo de volta.'); // <--- Notificação aqui
+    showToast('Sessão anterior retomada! Bem-vindo de volta.');
   }
   
   updateTurnUI();
@@ -400,37 +433,6 @@ function updateTurnUI() {
     roll.textContent = 'Rolar Dado 🎲';
     roll.disabled = false;
   }
-}
-
-// ─── ANIMAÇÃO DE MOVIMENTO ────────────────────────────
-function animateMovement(p, targetPos, callback) {
-  const oldPos = p.position;
-  if (oldPos === targetPos) {
-    if (callback) callback();
-    return;
-  }
-
-  const step = targetPos > oldPos ? 1 : -1;
-  const totalSteps = Math.abs(targetPos - oldPos);
-  let currentStep = 0;
-
-  const interval = setInterval(() => {
-    currentStep++;
-    p.position += step;
-    renderPawns();
-
-    // Quando chegar no destino
-    if (currentStep === totalSteps) {
-      clearInterval(interval);
-      
-      // Pisca a casa final
-      const cell = $$(`cell-${p.position}`);
-      if (cell) cell.classList.add('highlight-move');
-      setTimeout(() => cell && cell.classList.remove('highlight-move'), 600);
-      
-      if (callback) callback();
-    }
-  }, 250); // 250ms de tempo pulando entre cada casa
 }
 
 // ─── ROLL ─────────────────────────────────────────────
@@ -626,11 +628,6 @@ function executeSquareAction(p, sq, pos) {
   }
 }
 
-function movePlayerByAmount(p, amount) {
-  p.position = Math.max(1, Math.min(60, p.position + amount));
-  renderPawns();
-}
-
 // ─── CARDS ────────────────────────────────────────────
 
 function drawCard() {
@@ -679,6 +676,7 @@ function handleCard(p, isBonus, cb) {
   const handler = () => {
     closeBtn.removeEventListener('click', handler);
     modal.classList.remove('open');
+    
     // Passe o callback para aplicar o efeito da carta e andar
     applyCardEffect(card, p, finalEffect, () => {
       renderAll();
@@ -814,13 +812,12 @@ function showSquareModal(pos, p, sq, cb) {
         <button class="choice-btn choice-yes" id="c20-yes">Aceitar salário baixo → Casa 23</button>
         <button class="choice-btn choice-no" id="c20-no">Esperar oferta melhor → Perde 1 rodada</button>
       `;
-      // DENTRO DO CASE 20:
       const h20y = () => {
         $$('c20-yes').removeEventListener('click', h20y);
         $$('c20-no').removeEventListener('click', h20n);
         modal.classList.remove('open');
         addLog('special', '💼', `${p.name} aceitou salário menor → vai para casa 23.`);
-        // Remove p.position = 23 e usa movePlayerByAmount
+        
         movePlayerByAmount(p, 3, () => {
            saveSession();
            nextTurn();
