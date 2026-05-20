@@ -689,6 +689,32 @@ function handleCard(p, isBonus, cb) {
   closeBtn.addEventListener('click', handler);
 }
 
+function resolveCardEffect(card, p) {
+  switch (card.effect) {
+    case 'advance':
+      return { type: 'advance', value: card.value, label: `+${card.value} casas`, positive: true };
+    case 'back':
+      return { type: 'back', value: card.value, label: `−${card.value} casas`, negative: true };
+    case 'skip': {
+      const immune = card.immuneArea && p.area === card.immuneArea;
+      if (immune) return { type: 'none', value: 0, label: `🏥 Imunidade! (Saúde) — continua jogando`, positive: true };
+      return { type: 'skip', value: card.value, label: `Perde ${card.value} rodada`, negative: true };
+    }
+    case 'advance_area': {
+      const isBonus = card.areaBonus.includes(p.area);
+      const val = isBonus ? card.valuePrimary : card.valueSecondary;
+      return { type: 'advance', value: val, label: `+${val} casa${val !== 1 ? 's' : ''}`, positive: true };
+    }
+    case 'back_area': {
+      const isSafe = card.areaBonus.includes(p.area);
+      if (isSafe) return { type: 'none', value: 0, label: 'Estabilidade! Fica onde está.', positive: true };
+      return { type: 'back', value: card.valueSecondary, label: `−${card.valueSecondary} casas`, negative: true };
+    }
+    default:
+      return { type: 'none', value: 0, label: '—', positive: false, negative: false };
+  }
+}
+
 function applyCardEffect(card, p, resolved, callback) {
   const done = () => {
     if (p.position >= 60) {
