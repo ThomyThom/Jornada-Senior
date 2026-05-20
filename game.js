@@ -253,7 +253,12 @@ function startGame(resumed) {
   showScreen('game');
   buildBoard();
   renderAll();
-  if (resumed) addLog('neutral', '🔄', 'Sessão anterior retomada!');
+  
+  if (resumed) {
+    addLog('neutral', '🔄', 'Sessão anterior retomada!');
+    showToast('Sessão anterior retomada! Bem-vindo de volta.'); // <--- Notificação aqui
+  }
+  
   updateTurnUI();
 
   $$('btnRoll').addEventListener('click', handleRoll);
@@ -397,6 +402,37 @@ function updateTurnUI() {
   }
 }
 
+// ─── ANIMAÇÃO DE MOVIMENTO ────────────────────────────
+function animateMovement(p, targetPos, callback) {
+  const oldPos = p.position;
+  if (oldPos === targetPos) {
+    if (callback) callback();
+    return;
+  }
+
+  const step = targetPos > oldPos ? 1 : -1;
+  const totalSteps = Math.abs(targetPos - oldPos);
+  let currentStep = 0;
+
+  const interval = setInterval(() => {
+    currentStep++;
+    p.position += step;
+    renderPawns();
+
+    // Quando chegar no destino
+    if (currentStep === totalSteps) {
+      clearInterval(interval);
+      
+      // Pisca a casa final
+      const cell = $$(`cell-${p.position}`);
+      if (cell) cell.classList.add('highlight-move');
+      setTimeout(() => cell && cell.classList.remove('highlight-move'), 600);
+      
+      if (callback) callback();
+    }
+  }, 250); // 250ms de tempo pulando entre cada casa
+}
+
 // ─── ROLL ─────────────────────────────────────────────
 
 function handleRoll() {
@@ -469,44 +505,46 @@ function applyRoll(p, value, isBonus) {
 
 function movePlayer(p, value, isBonus) {
   const oldPos = p.position;
-  const newPos = Math.min(60, p.position + value);
-  p.position = newPos;
+  const newPos = Math.max(1, Math.min(60, p.position + value));
   p.turns++;
 
   addLog('neutral', '📍', `${p.name} moveu da casa ${oldPos} → ${newPos}.`);
 
-  renderPawns();
-  renderPlayersPanel();
-
-  // Flash the cell
-  const cell = $$(`cell-${newPos}`);
-  if (cell) cell.classList.add('highlight-move');
-  setTimeout(() => cell && cell.classList.remove('highlight-move'), 600);
-
-  saveSession();
-
-  // Check win
-  if (newPos >= 60) {
-    p.position = 60;
-    G.phase = 'done';
-    G.winner = p.id;
+  // Move de forma animada casa por casa
+  animateMovement(p, newPos, () => {
+    renderPlayersPanel();
     saveSession();
-    setTimeout(() => showWinner(p), 400);
-    return;
-  }
 
-  // Artes bonus card on 6
-  if (p.area === 'artes' && value === 6 && !isBonus) {
-    addLog('special', '🎨', `${p.name} (Artes) tirou 6 — carta bônus!`);
-    setTimeout(() => {
-      handleCard(p, true, () => {
-        handleSquareAction(p, newPos, isBonus);
-      });
-    }, 300);
-    return;
-  }
+    // Check win
+    if (p.position >= 60) {
+      G.phase = 'done';
+      G.winner = p.id;
+      saveSession();
+      setTimeout(() => showWinner(p), 400);
+      return;
+    }
 
-  setTimeout(() => handleSquareAction(p, newPos, isBonus), 300);
+    // Artes bonus card on 6
+    if (p.area === 'artes' && value === 6 && !isBonus) {
+      addLog('special', '🎨', `${p.name} (Artes) tirou 6 — carta bônus!`);
+      setTimeout(() => {
+        handleCard(p, true, () => {
+          handleSquareAction(p, p.position, isBonus);
+        });
+      }, 300);
+      return;
+    }
+
+    setTimeout(() => handleSquareAction(p, p.position, isBonus), 300);
+  });
+}
+
+function movePlayerByAmount(p, amount, callback) {
+  const target = Math.max(1, Math.min(60, p.position + amount));
+  animateMovement(p, target, () => {
+    renderAll();
+    if (callback) callback();
+  });
 }
 
 function handleSquareAction(p, pos, isBonus) {
@@ -516,10 +554,11 @@ function handleSquareAction(p, pos, isBonus) {
     if (others.length > 0) {
       addLog('positive', '📊', `${p.name} (Negócios) fez Networking! Avança 2 casas extras.`);
       setTimeout(() => {
-        movePlayerByAmount(p, 2);
-        renderAll();
-        saveSession();
-        setTimeout(() => resolveSquare(p, p.position, isBonus), 400);
+        // Usa o callback para aguardar a animação
+        movePlayerByAmount(p, 2, () => {
+          saveSession();
+          setTimeout(() => resolveSquare(p, p.position, isBonus), 400);
+        });
       }, 400);
       return;
     }
@@ -563,18 +602,18 @@ function executeSquareAction(p, sq, pos) {
     }
     case 'advance_2': {
       addLog('positive', '⬆️', `${p.name} foi promovido a Júnior! +2 casas.`);
-      movePlayerByAmount(p, 2);
-      renderAll();
-      saveSession();
-      setTimeout(() => nextTurn(), 400);
+      movePlayerByAmount(p, 2, () => {
+        saveSession();
+        setTimeout(() => nextTurn(), 400);
+      });
       break;
     }
     case 'back_3': {
       addLog('negative', '📉', `${p.name} sofreu com a crise! −3 casas.`);
-      movePlayerByAmount(p, -3);
-      renderAll();
-      saveSession();
-      setTimeout(() => nextTurn(), 400);
+      movePlayerByAmount(p, -3, () => {
+        saveSession();
+        setTimeout(() => nextTurn(), 400);
+      });
       break;
     }
     case 'block_low': {
@@ -640,68 +679,49 @@ function handleCard(p, isBonus, cb) {
   const handler = () => {
     closeBtn.removeEventListener('click', handler);
     modal.classList.remove('open');
-    applyCardEffect(card, p, finalEffect);
-    renderAll();
-    saveSession();
-    if (cb) cb();
+    // Passe o callback para aplicar o efeito da carta e andar
+    applyCardEffect(card, p, finalEffect, () => {
+      renderAll();
+      saveSession();
+      if (cb) cb();
+    });
   };
   closeBtn.addEventListener('click', handler);
 }
 
-function resolveCardEffect(card, p) {
-  switch (card.effect) {
-    case 'advance':
-      return { type: 'advance', value: card.value, label: `+${card.value} casas`, positive: true };
-    case 'back':
-      return { type: 'back', value: card.value, label: `−${card.value} casas`, negative: true };
-    case 'skip': {
-      const immune = card.immuneArea && p.area === card.immuneArea;
-      if (immune) return { type: 'none', value: 0, label: `🏥 Imunidade! (Saúde) — continua jogando`, positive: true };
-      return { type: 'skip', value: card.value, label: `Perde ${card.value} rodada`, negative: true };
+function applyCardEffect(card, p, resolved, callback) {
+  const done = () => {
+    if (p.position >= 60) {
+      p.position = 60;
+      G.phase = 'done';
+      G.winner = p.id;
     }
-    case 'advance_area': {
-      const isBonus = card.areaBonus.includes(p.area);
-      const val = isBonus ? card.valuePrimary : card.valueSecondary;
-      return { type: 'advance', value: val, label: `+${val} casa${val !== 1 ? 's' : ''}`, positive: true };
-    }
-    case 'back_area': {
-      const isSafe = card.areaBonus.includes(p.area);
-      if (isSafe) return { type: 'none', value: 0, label: 'Estabilidade! Fica onde está.', positive: true };
-      return { type: 'back', value: card.valueSecondary, label: `−${card.valueSecondary} casas`, negative: true };
-    }
-    default:
-      return { type: 'none', value: 0, label: '—', positive: false, negative: false };
-  }
-}
+    if (callback) callback();
+  };
 
-function applyCardEffect(card, p, resolved) {
   switch (resolved.type) {
     case 'advance':
       if (resolved.value > 0) {
         addLog('positive', card.icon, `${p.name}: "${card.title}" → +${resolved.value} casas.`);
-        movePlayerByAmount(p, resolved.value);
+        movePlayerByAmount(p, resolved.value, done);
       } else {
         addLog('positive', card.icon, `${p.name}: "${card.title}" → sem movimento.`);
+        done();
       }
       break;
     case 'back':
       addLog('negative', card.icon, `${p.name}: "${card.title}" → −${resolved.value} casas.`);
-      movePlayerByAmount(p, -resolved.value);
+      movePlayerByAmount(p, -resolved.value, done);
       break;
     case 'skip':
       addLog('negative', card.icon, `${p.name}: "${card.title}" → perde ${resolved.value} rodada.`);
       p.skipsLeft += resolved.value;
+      done();
       break;
     case 'none':
       addLog('positive', card.icon, `${p.name}: "${card.title}" → ${resolved.label}`);
+      done();
       break;
-  }
-
-  // Check win after card
-  if (p.position >= 60) {
-    p.position = 60;
-    G.phase = 'done';
-    G.winner = p.id;
   }
 }
 
@@ -768,15 +788,17 @@ function showSquareModal(pos, p, sq, cb) {
         <button class="choice-btn choice-yes" id="c20-yes">Aceitar salário baixo → Casa 23</button>
         <button class="choice-btn choice-no" id="c20-no">Esperar oferta melhor → Perde 1 rodada</button>
       `;
+      // DENTRO DO CASE 20:
       const h20y = () => {
         $$('c20-yes').removeEventListener('click', h20y);
         $$('c20-no').removeEventListener('click', h20n);
         modal.classList.remove('open');
         addLog('special', '💼', `${p.name} aceitou salário menor → vai para casa 23.`);
-        p.position = 23;
-        renderAll();
-        saveSession();
-        nextTurn();
+        // Remove p.position = 23 e usa movePlayerByAmount
+        movePlayerByAmount(p, 3, () => {
+           saveSession();
+           nextTurn();
+        });
       };
       const h20n = () => {
         $$('c20-yes').removeEventListener('click', h20y);
